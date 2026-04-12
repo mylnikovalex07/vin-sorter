@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIN Сортировщик</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Unbounded:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #2a2a3a;
+    --accent: #4fffb0;
+    --accent2: #ff4f7b;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+
+  .header h1 {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--accent), #00d4ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+
+  .header p {
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    width: 100%;
+    max-width: 640px;
+    margin-bottom: 24px;
+  }
+
+  .field-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 32px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    margin-bottom: 24px;
+  }
+
+  .drop-zone:hover, .drop-zone.active {
+    border-color: var(--accent);
+    background: rgba(79, 255, 176, 0.04);
+  }
+
+  .drop-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .drop-zone .icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+  }
+
+  .drop-zone .hint {
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin-top: 6px;
+  }
+
+  .drop-zone .selected {
+    color: var(--accent);
+    font-size: 0.85rem;
+    margin-top: 8px;
+    font-weight: 600;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #00d4ff);
+    color: #0a0a0f;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(79, 255, 176, 0.3);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-download {
+    background: linear-gradient(135deg, #ff4f7b, #ff8c42);
+    color: white;
+    margin-top: 16px;
+    display: none;
+  }
+
+  .btn-download:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 79, 123, 0.3);
+  }
+
+  .progress-wrap {
+    display: none;
+    margin-top: 24px;
+  }
+
+  .progress-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .progress-bar-bg {
+    background: var(--border);
+    border-radius: 100px;
+    height: 6px;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #00d4ff);
+    border-radius: 100px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+
+  .status-msg {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 10px;
+    min-height: 20px;
+  }
+
+  .results {
+    display: none;
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+
+  .stat-num.green { color: var(--accent); }
+  .stat-num.red { color: var(--accent2); }
+  .stat-num.blue { color: #00d4ff; }
+
+  .stat-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .missing-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .missing-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .vin-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .vin-tag {
+    background: rgba(255, 79, 123, 0.1);
+    border: 1px solid rgba(255, 79, 123, 0.3);
+    color: var(--accent2);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  .vin-list::-webkit-scrollbar { width: 4px; }
+  .vin-list::-webkit-scrollbar-track { background: var(--border); }
+  .vin-list::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 2px; }
+
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(10,10,15,0.3);
+    border-top-color: #0a0a0f;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>VIN СОРТИРОВЩИК</h1>
+  <p>Загрузите PDF с таблицей и фотографии — получите готовые папки</p>
+</div>
+
+<div class="card">
+  <span class="field-label">📄 PDF с таблицей VIN-кодов</span>
+  <div class="drop-zone" id="pdf-zone">
+    <input type="file" id="pdf-input" accept=".pdf">
+    <div class="icon">📋</div>
+    <div>Нажмите или перетащите PDF файл</div>
+    <div class="hint">Только .pdf</div>
+    <div class="selected" id="pdf-name"></div>
+  </div>
+
+  <span class="field-label">📸 Папка с фотографиями</span>
+  <div class="drop-zone" id="photos-zone">
+    <input type="file" id="photos-input" multiple accept="image/*" webkitdirectory>
+    <div class="icon">🗂️</div>
+    <div>Нажмите и выберите папку с фото</div>
+    <div class="hint">Выбирайте всю папку целиком</div>
+    <div class="selected" id="photos-name"></div>
+  </div>
+
+  <button class="btn btn-primary" id="process-btn" disabled onclick="startProcessing()">
+    ОБРАБОТАТЬ
+  </button>
+
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-label">
+      <span>Обработка...</span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="status-msg" id="status-msg">Загружаем файлы на сервер...</div>
+  </div>
+
+  <button class="btn btn-download" id="download-btn">
+    ⬇ СКАЧАТЬ АРХИВ
+  </button>
+</div>
+
+<div class="results" id="results">
+  <div class="stats-grid">
+    <div class="stat-box">
+      <div class="stat-num blue" id="stat-total">—</div>
+      <div class="stat-label">VIN в PDF</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num green" id="stat-matched">—</div>
+      <div class="stat-label">Найдено фото</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num red" id="stat-missing">—</div>
+      <div class="stat-label">Без фото</div>
+    </div>
+  </div>
+
+  <div class="missing-block" id="missing-block" style="display:none">
+    <div class="missing-title">❌ VIN-коды без фотографий</div>
+    <div class="vin-list" id="missing-list"></div>
+  </div>
+</div>
+
+<script>
+  const pdfInput = document.getElementById('pdf-input');
+  const photosInput = document.getElementById('photos-input');
+  const processBtn = document.getElementById('process-btn');
+
+  pdfInput.addEventListener('change', () => {
+    if (pdfInput.files[0]) {
+      document.getElementById('pdf-name').textContent = '✓ ' + pdfInput.files[0].name;
+      checkReady();
+    }
+  });
+
+  photosInput.addEventListener('change', () => {
+    if (photosInput.files.length > 0) {
+      document.getElementById('photos-name').textContent = `✓ ${photosInput.files.length} фотографий выбрано`;
+      checkReady();
+    }
+  });
+
+  function checkReady() {
+    processBtn.disabled = !(pdfInput.files[0] && photosInput.files.length > 0);
+  }
+
+  function setProgress(pct, msg) {
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-pct').textContent = pct + '%';
+    if (msg) document.getElementById('status-msg').textContent = msg;
+  }
+
+  async function startProcessing() {
+    processBtn.disabled = true;
+    processBtn.innerHTML = '<span class="spinner"></span>ОБРАБОТКА...';
+    document.getElementById('progress-wrap').style.display = 'block';
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('download-btn').style.display = 'none';
+
+    setProgress(10, 'Загружаем файлы на сервер...');
+
+    const formData = new FormData();
+    formData.append('pdf_file', pdfInput.files[0]);
+    for (const file of photosInput.files) {
+      formData.append('photos', file);
+    }
+
+    setProgress(20, 'Файлы загружены. Извлекаем VIN-коды из PDF...');
+
+    try {
+      const resp = await fetch('/process', { method: 'POST', body: formData });
+
+      setProgress(60, 'Распознаём VIN на фотографиях (OCR)...');
+
+      if (!resp.ok) throw new Error('Ошибка сервера: ' + resp.status);
+      const data = await resp.json();
+
+      setProgress(90, 'Формируем архив...');
+      await new Promise(r => setTimeout(r, 500));
+      setProgress(100, 'Готово!');
+
+      // Показываем результаты
+      document.getElementById('stat-total').textContent = data.total_vins;
+      document.getElementById('stat-matched').textContent = data.matched;
+      document.getElementById('stat-missing').textContent = data.missing_count;
+      document.getElementById('results').style.display = 'block';
+
+      if (data.missing_vins && data.missing_vins.length > 0) {
+        document.getElementById('missing-block').style.display = 'block';
+        const list = document.getElementById('missing-list');
+        list.innerHTML = '';
+        data.missing_vins.forEach(vin => {
+          const tag = document.createElement('div');
+          tag.className = 'vin-tag';
+          tag.textContent = vin;
+          list.appendChild(tag);
+        });
+      }
+
+      // Кнопка скачать
+      const dlBtn = document.getElementById('download-btn');
+      dlBtn.style.display = 'block';
+      dlBtn.onclick = () => { window.location.href = data.download_url; };
+
+      processBtn.innerHTML = 'ОБРАБОТАТЬ';
+      processBtn.disabled = false;
+
+    } catch (err) {
+      setProgress(0, '❌ Ошибка: ' + err.message);
+      processBtn.innerHTML = 'ОБРАБОТАТЬ';
+      processBtn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
